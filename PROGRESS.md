@@ -4,7 +4,9 @@
 
 Kiroween 2026 entry, category **Skeleton Crew**: one Wi-Fi sensing skeleton powering two apps, **Grandma Ghost** (elder fall and inactivity alerts) and **Cold Room Guardian** (a worker left inside a cold room).
 
-**Submission deadline:** Dec 4, 2026, 2:00 PM PT (Dec 5, 3:30 AM IST). Last updated Nov 20, 2026.
+**Submission deadline:** Dec 4, 2026, 2:00 PM PT (Dec 5, 3:30 AM IST). Last updated Nov 23, 2026.
+
+**Focus (Nov 23):** Grandma Ghost first. Cold Room Guardian gets a thin version at the end. The step-by-step build plan for the Kiro IDE is in [docs/KIRO_WORKPLAN.md](docs/KIRO_WORKPLAN.md).
 
 ---
 
@@ -28,6 +30,14 @@ Two classic **ESP32-D0WD-V3 DevKit** boards (CH9102 USB chip), both checked with
 | Motion score, walking between board and router | ~0.145 (≈5×) | ~0.35 (≈8–10×) |
 
 Conclusion: a person walking through the link is clearly visible in the Wi-Fi signal. Each crossing shows up as a separate peak.
+
+### Two more boards: C and D (Nov 22)
+Same chip (ESP32-D0WD-V3 rev 3.1), but with a CP210x USB chip. Both now run the spike firmware and stream CSI at 100 packets/s. They can't be flashed with the Arduino IDE Upload button; use the piece-by-piece method in the [work plan appendix](docs/KIRO_WORKPLAN.md#appendix-flashing-boards-c-and-d).
+
+| | Board C | Board D |
+|---|---|---|
+| MAC | `8c:94:df:90:59:dc` | `00:70:07:a3:db:18` |
+| CSI rate | 100 packets/s | 100 packets/s |
 
 ### Decisions so far
 | Decision | Why |

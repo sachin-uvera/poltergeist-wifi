@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:kiro.dev)",
+      "ClaudeInChromeDomain(kiroween.devpost.com)"
+    ]
+  }
+}

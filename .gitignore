@@ -2,3 +2,4 @@
 context.md
 secrets.h
 __pycache__/
+build/

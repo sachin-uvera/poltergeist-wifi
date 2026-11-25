@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "spirit-box": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with", "mcp[cli]",
+        "--with", "numpy",
+        "--with", "tomli-w",
+        "python", "-m", "core.mcp_server"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {}
+    }
+  }
+}

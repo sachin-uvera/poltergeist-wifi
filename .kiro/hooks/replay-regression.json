@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Replay regression on core/ save",
+      "trigger": "PostFileSave",
+      "description": "Replays all recordings through the pipeline and state machine whenever a file inside core/ is saved. Fails if a known fall is missed or a false alarm appears.",
+      "matcher": "core/",
+      "action": {
+        "type": "command",
+        "command": "cd \"${workspaceFolder}\" && uv run --with pytest --with numpy python -m pytest core/tests/test_state.py -x -q --tb=short 2>&1",
+        "timeout": 120
+      }
+    }
+  ]
+}

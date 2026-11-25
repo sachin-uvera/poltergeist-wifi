@@ -1,0 +1,25 @@
+[pipeline]
+window         = 50     # packets per motion-score window (~0.5 s at 100 Hz)
+smooth_alpha   = 0.3    # exponential smoothing factor (0 = no smoothing, 1 = no memory)
+clip_z         = 4.0    # clip amplitudes beyond this many std-devs from the mean
+baseline_secs  = 60     # seconds of empty-room data to capture for calibration
+
+[zones]
+# A link is "active" when its smoothed, baseline-normalised score exceeds this value.
+# Calibrated from recordings (Nov 25):
+#   empty p95=0.094  max=0.162
+#   sitting p95=0.096  max=0.114
+#   fan p95=0.119  max=0.155
+#   walk p95=0.170  max=0.323
+#   fall p95=0.158  max=0.257
+# Threshold set above empty/sitting/fan max, below walk/fall p95.
+motion_threshold = 0.17
+
+[state]
+fall_burst_secs    = 0.5   # minimum seconds of high motion before a fall candidate
+fall_still_secs    = 10.0  # seconds of stillness after burst → possible_fall (walk pause=9.2s, fall=11.3s)
+fall_confirm_secs  = 15.0  # more seconds of stillness → fall
+fall_links_min     = 2     # minimum simultaneous active links during the burst
+empty_secs         = 60.0  # all-quiet window to declare room EMPTY (> inactive_secs_demo)
+inactive_secs      = 1200  # 20 min of present-but-no-movement → inactive_too_long
+inactive_secs_demo = 30    # short value for demos

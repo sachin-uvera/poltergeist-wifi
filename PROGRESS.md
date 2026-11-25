@@ -23,6 +23,7 @@ Two classic **ESP32-D0WD-V3 DevKit** boards (CH9102 USB chip), both checked with
 
 | | Board A | Board B |
 |---|---|---|
+| MAC | `20:9b:a9:60:e1:6c` | `8c:94:df:61:43:b8` |
 | Wi-Fi | 2.4 GHz, ch 6, −55 dBm | 2.4 GHz, ch 6, −57 dBm |
 | CSI rate | 100 packets/s | 100 packets/s |
 | CSI size | 128 values (64 subcarriers, LLTF) | same |

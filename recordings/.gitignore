@@ -1,0 +1,3 @@
+# CSI session recordings stay local — large files, may contain room layout info.
+# Commit specific files deliberately with: git add -f recordings/filename.csv
+*.csv

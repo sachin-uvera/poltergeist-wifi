@@ -2,7 +2,7 @@
 
 The order to build Poltergeist in the Kiro IDE once the hackathon credits arrive. Work top to bottom. Each step says what to create in Kiro, a prompt to start it, and how to tell it's done.
 
-**Focus:** Grandma Ghost first. Cold Room Guardian gets a thin version at the end (step 10), because Skeleton Crew requires two app folders.
+**Focus:** Grandma Ghost only. Step 10 (Cold Room Guardian) was dropped on Nov 26: we enter Costume Contest with one app.
 
 **Rule for every step:** build it *through* Kiro (steering, specs, hooks, MCP) and commit `.kiro/` with the code. That folder is the judges' evidence that Kiro was used.
 
@@ -128,13 +128,8 @@ Tools the Kiro agent can call:
 
 **Done when:** the public URL works in a private browser window on a phone.
 
-### 10. Thin Cold Room Guardian (`apps/cold-room-guardian`)
-The same `core/` with different rules and a separate small screen:
-- **Room status:** empty or occupied.
-- **"Locking" button:** if the room is occupied when it's pressed, the alarm fires: "Someone is still inside".
-- Reuse the replay recordings. No new hardware.
-
-**Done when:** it runs from its own folder and imports only from `core/`.
+### 10. Dropped: Cold Room Guardian
+Decided Nov 26: the entry is Costume Contest with one app. Cold Room Guardian appears in the README as another possible use of the same sensing, and nowhere else. It is not built and not in the demo. Use the time for spooky polish, hosting and the write-up.
 
 ### 11. Agent and power (write-up items)
 - Use at least one **Kiro power** and one **custom agent**. For example, a "ghost hunter" agent that runs the replay suite and summarises any regressions.
@@ -159,11 +154,11 @@ The same `core/` with different rules and a separate small screen:
 | Nov 27 | 5 state machine, 6 hook |
 | Nov 28 | 7 spirit-box MCP |
 | Nov 29–30 | 8 Grandma Ghost UI and Telegram |
-| Dec 1 | 9 hosting, 10 Cold Room Guardian. **Kiro credit request deadline is 12:00 PM PT.** |
+| Dec 1 | 9 hosting, spooky polish. **Kiro credit request deadline is 12:00 PM PT.** |
 | Dec 2–3 | 11 agent and power, 12 video and write-up |
 | **Dec 4 (evening IST)** | **Submit.** The hard deadline is Dec 4, 2:00 PM PT (Dec 5, 3:30 AM IST). |
 
-**If behind schedule, cut in this order:** the custom agent, the waveform panel, the calibration screen animation. **Never cut:** replay mode, the fall alert, the MCP moment, or the Cold Room Guardian folder.
+**If behind schedule, cut in this order:** the custom agent, the waveform panel, the calibration screen animation. **Never cut:** replay mode, the fall alert, or the MCP moment.
 
 ## Open decisions (settle in the step's spec)
 - **4 boards on USB serial** need 4 USB ports or a powered hub. If ports run short, switch the firmware to send UDP to the hub over Wi-Fi (step 2).

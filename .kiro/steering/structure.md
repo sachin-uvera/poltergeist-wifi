@@ -19,12 +19,9 @@ poltergeist-wifi/
 │   └── config.toml     # all thresholds and tunable values (read by MCP server)
 │
 ├── apps/
-│   ├── grandma-ghost/  # Grandma Ghost web app
-│   │                   # haunted floor plan, tombstone log, Telegram alert
-│   │                   # imports only from core/
-│   └── cold-room-guardian/   # Cold Room Guardian web app
-│                             # room status, locking-button alarm
-│                             # imports only from core/
+│   └── grandma-ghost/  # Grandma Ghost web app (the only app)
+│                       # haunted floor plan, tombstone log, Telegram alert
+│                       # imports only from core/
 │
 ├── recordings/         # labelled CSI sessions used for replay and regression tests
 │                       # naming: <label>_<YYYYMMDD>.csv
@@ -49,7 +46,7 @@ poltergeist-wifi/
 
 **`core/`** — no app-specific logic here. Both apps import from `core/`; `core/` imports from neither app.
 
-**`apps/`** — each app folder is self-contained except for its `core/` imports. No cross-imports between `grandma-ghost` and `cold-room-guardian`.
+**`apps/`** — each app folder is self-contained except for its `core/` imports.
 
 **`firmware/`** — Arduino sketches only. The hub-side Python never lives here.
 

@@ -2,11 +2,11 @@
 
 > Your Wi-Fi is watching over you. No cameras.
 
-Kiroween 2026 entry, category **Skeleton Crew**: one Wi-Fi sensing skeleton powering two apps, **Grandma Ghost** (elder fall and inactivity alerts) and **Cold Room Guardian** (a worker left inside a cold room).
+Kiroween 2026 entry, category **Costume Contest** (decided Nov 26): one app, **Grandma Ghost** (elder fall and inactivity alerts), on a reusable Wi-Fi sensing skeleton. Cold Room Guardian (a worker left inside a cold room) is mentioned in the README as another possible use only. It is not built and not in the demo, so the entry does not fall under Skeleton Crew.
 
 **Submission deadline:** Dec 4, 2026, 2:00 PM PT (Dec 5, 3:30 AM IST). Last updated Nov 23, 2026.
 
-**Focus (Nov 23):** Grandma Ghost first. Cold Room Guardian gets a thin version at the end. The step-by-step build plan for the Kiro IDE is in [docs/KIRO_WORKPLAN.md](docs/KIRO_WORKPLAN.md).
+**Focus (Nov 26):** Grandma Ghost, polished and spooky. No second app. The step-by-step build plan for the Kiro IDE is in [docs/KIRO_WORKPLAN.md](docs/KIRO_WORKPLAN.md).
 
 ---
 
@@ -64,7 +64,6 @@ Same chip (ESP32-D0WD-V3 rev 3.1), but with a CP210x USB chip. Both now run the 
 - [ ] Spec: `core` signal pipeline (cleanup, motion score, 2-zone logic)
 - [ ] Spec: state machine (empty, present, moving, possible fall, fall, inactive too long)
 - [ ] Spec: Grandma Ghost app (haunted floor plan, tombstone event log, Telegram alert)
-- [ ] Spec: Cold Room Guardian app (still-inside alarm, room-empty status)
 - [ ] Hook: replay `recordings/` as regression tests on every change
 - [ ] MCP server "spirit box": streams live CSI stats to the Kiro agent so it can tune thresholds (signature demo moment)
 - [ ] Property-based tests on the signal math (no NaN; score rises with injected disturbance)
@@ -87,7 +86,7 @@ Same chip (ESP32-D0WD-V3 rev 3.1), but with a CP210x USB chip. Both now run the 
 | Date | Milestone |
 |---|---|
 | ~~Nov 22~~ | ~~Hardware go/no-go~~ ✅ passed Nov 20 |
-| Nov 28 | Decide: keep Skeleton Crew (2 apps) or fall back to Costume Contest (1 app) |
+| ~~Nov 28~~ | ~~Decide Skeleton Crew or Costume Contest~~ Costume Contest, decided Nov 26 |
 | Dec 1, 12:00 PM PT | Last day to request Kiro credits |
 | Dec 2–3 | Record the video, write the submission |
 | Dec 4 (evening IST) | Submit |
@@ -99,8 +98,7 @@ Same chip (ESP32-D0WD-V3 rev 3.1), but with a CP210x USB chip. Both now run the 
 .kiro/            steering, specs, hooks (Kiro's evidence; never gitignore it)
 core/             shared sensing skeleton (ingest, pipeline, state machine, replay)
 firmware/csi_node production ESP32 firmware
-apps/grandma-ghost
-apps/cold-room-guardian
+apps/grandma-ghost  the only app
 recordings/       labelled CSI sessions for replay and regression tests
 docs/             Kiro write-up, architecture, video script
 spike/            hardware feasibility test (throwaway, kept as evidence)

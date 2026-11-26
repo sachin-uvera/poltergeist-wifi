@@ -4,6 +4,8 @@
 
 Kiroween 2026 entry, **Costume Contest**.
 
+**Live demo, no hardware needed: https://sachin-uvera.github.io/poltergeist-wifi/**
+
 Grandma Ghost watches over an elderly person's room using only Wi-Fi signals. Four ESP32 boards in the room corners measure how the signal between each pair changes. A person walking through or lying on the floor disturbs those signals, and the app turns that into a haunted map: a ghost appears where the person is, a tombstone log records what happened, and the family gets a Telegram message when someone falls or has not moved for too long.
 
 No cameras and no microphones. Raw Wi-Fi data never leaves the hub; only scores and events reach the screen and Telegram.
@@ -32,7 +34,7 @@ Then open http://localhost:8080.
 
 With the boards on the same Wi-Fi as your laptop, add `--live` instead of `--replay fall`, then press **Exorcise the room** with the room empty to calibrate.
 
-Hosted replay demo: the public demo is a static site in `site/`, published to GitHub Pages by `.github/workflows/pages.yml`. It has no server and needs no hardware. It plays back pre-computed files that hold only motion scores, room states, ghost positions and event text, never raw Wi-Fi data. To rebuild it after changing the pipeline (needs the local `recordings/`, which are not in the repo):
+Hosted replay demo: the public demo at the link above is a static site in `site/`, published to GitHub Pages by `.github/workflows/pages.yml`. It has no server and needs no hardware. It plays back pre-computed files that hold only motion scores, room states, ghost positions and event text, never raw Wi-Fi data. To rebuild it after changing the pipeline (needs the local `recordings/`, which are not in the repo):
 
 ```
 uv run --with numpy python apps/grandma-ghost/export_demo.py

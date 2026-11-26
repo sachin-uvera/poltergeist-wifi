@@ -4,7 +4,7 @@
 
 Kiroween 2026 entry, category **Costume Contest** (decided Nov 26): one app, **Grandma Ghost** (elder fall and inactivity alerts), on a reusable Wi-Fi sensing skeleton. Cold Room Guardian (a worker left inside a cold room) is mentioned in the README as another possible use only. It is not built and not in the demo, so the entry does not fall under Skeleton Crew.
 
-**Submission deadline:** Dec 4, 2026, 2:00 PM PT (Dec 5, 3:30 AM IST). Last updated Nov 23, 2026.
+**Submission deadline:** Dec 4, 2026, 2:00 PM PT (Dec 5, 3:30 AM IST). Last updated Nov 26, 2026.
 
 **Focus (Nov 26):** Grandma Ghost, polished and spooky. No second app. The step-by-step build plan for the Kiro IDE is in [docs/KIRO_WORKPLAN.md](docs/KIRO_WORKPLAN.md).
 
@@ -59,24 +59,25 @@ Same chip (ESP32-D0WD-V3 rev 3.1), but with a CP210x USB chip. Both now run the 
 ## Remaining
 
 ### Build: done in Kiro, so `.kiro/` is the evidence
-- [ ] Steering files: product, privacy (no raw CSI leaves the hub, consent first), tech conventions
-- [ ] Spec: `firmware/csi_node`, the production firmware built from the spike
-- [ ] Spec: `core` signal pipeline (cleanup, motion score, 2-zone logic)
-- [ ] Spec: state machine (empty, present, moving, possible fall, fall, inactive too long)
-- [ ] Spec: Grandma Ghost app (haunted floor plan, tombstone event log, Telegram alert)
-- [ ] Hook: replay `recordings/` as regression tests on every change
-- [ ] MCP server "spirit box": streams live CSI stats to the Kiro agent so it can tune thresholds (signature demo moment)
-- [ ] Property-based tests on the signal math (no NaN; score rises with injected disturbance)
+- [x] Steering files: product, privacy (no raw CSI leaves the hub, consent first), tech conventions, structure
+- [ ] Spec: `firmware/csi_node`, the production firmware built from the spike. Spec and sketch are written (`.kiro/specs/firmware_csi_node.md`); not yet flashed or tested on the boards, which still run the spike firmware
+- [x] Spec: `core` signal pipeline (cleanup, motion score, per-link zones) (`.kiro/specs/core_pipeline.md`)
+- [x] Spec: state machine (empty, present, moving, possible fall, fall, inactive too long) (`.kiro/specs/core_state.md`)
+- [ ] Spec: Grandma Ghost app (haunted floor plan, tombstone event log, Telegram alert). The app is built (next line) but there is no spec file for it yet
+- [x] Hook: replay `recordings/` as regression tests on every change (`.kiro/hooks/replay-regression.json`; seen going red on a bad threshold and green again)
+- [ ] MCP server "spirit box": streams live CSI stats to the Kiro agent so it can tune thresholds (signature demo moment). `core/mcp_server.py` has 5 tools and is registered in `.kiro/settings/mcp.json`; replay and thresholds tested over stdio. Still open: `get_live_stats` only reflects the last replay, not the live boards; not yet tried from Kiro chat; `set_thresholds` strips the comments from `config.toml`
+- [x] Property-based tests on the signal math (no NaN; score rises with injected disturbance): 4 Hypothesis tests in `core/tests/test_pipeline_pbt.py`, plus 15 state-machine tests that replay the recordings
 - [ ] Use at least one Kiro power and one custom agent (both are listed in the write-up topics)
-- [ ] "Exorcise the room" calibration (60 s empty-room baseline)
-- [ ] Record labelled sessions: empty, walking, sitting, fall, ceiling fan
-- [ ] Replay mode, hosted publicly, and kept up until Jan 29, 2027 (end of judging)
+- [x] "Exorcise the room" calibration (60 s empty-room baseline), run on the real boards in live mode
+- [x] Record labelled sessions: empty, walking, sitting, fall, ceiling fan (Nov 25, in `recordings/`, kept local). Open: re-record `walk` without long standing pauses; they read as possible falls, so walk is left out of the hosted demo
+- [x] Grandma Ghost app (`apps/grandma-ghost`): live and replay modes, dark map with a ghost per person (up to two), tombstone log, Acknowledge, on-screen alarm with sound, Telegram alert on fall and inactivity. Telegram verified end to end with a synthetic fall; not yet tried with a real person falling on the mat
+- [x] Replay mode, hosted publicly, and kept up until Jan 29, 2027 (end of judging). Live since Nov 26 at https://sachin-uvera.github.io/poltergeist-wifi/ (static site on GitHub Pages, scores only). To keep it up: leave the repo public and Pages on.
 
 ### Submission
 - [ ] Demo video: under 3 minutes, public on YouTube, no copyrighted music or third-party trademarks, shows the real hardware working
 - [ ] Kiro write-up covering IDE/CLI/Web/Crew, custom agents, hooks, specs, steering, MCP, PBT, powers
 - [ ] Text description: problem, audience, features (in English)
-- [ ] README with setup instructions and a disclosure of pre-existing code and tools
+- [x] README with setup instructions and a disclosure of pre-existing code and tools (first version; extend before submitting)
 - [ ] Blog post (dev.to or Hashnode) that mentions the **Kiroween 2026 hackathon**
 - [ ] Social post that **starts with** `#KiroweenHackathon26`, about my favourite thing in Kiro (written by me, not AI)
 - [ ] Best Startup Project: Uvera website live, LinkedIn up to date, founder confirmation on the form

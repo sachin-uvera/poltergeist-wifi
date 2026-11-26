@@ -41,7 +41,8 @@ from core.pipeline import RoomPipeline
 from core.state import Event, StateMachine
 
 sys.path.insert(0, str(Path(__file__).parent))
-import position  # apps/grandma-ghost/position.py
+import position    # apps/grandma-ghost/position.py
+import tombstones  # apps/grandma-ghost/tombstones.py
 
 try:
     from dotenv import load_dotenv
@@ -149,12 +150,7 @@ def _publish(room: RoomPipeline, sm: StateMachine, baselines: dict[str, float]) 
     excess = {k: v - baselines.get(k, 0.0) for k, v in raw.items()}
 
     with _sm_lock:
-        if sm.state.value == "empty":
-            _tracker.reset()     # nobody in the room: no ghost, and forget the old spot
-            xys = []
-        else:
-            xys = _tracker.update(excess) or [(0.5, 0.5)]
-    ghosts = [{"x": round(x, 3), "y": round(y, 3)} for x, y in xys]
+        ghosts = position.place_ghosts(_tracker, sm.state.value, excess)
 
     with _lock:
         _state["scores"] = scores
@@ -165,29 +161,15 @@ def _publish(room: RoomPipeline, sm: StateMachine, baselines: dict[str, float]) 
            "room_state": sm.state.value, "ghosts": ghosts})
 
 
-_LABELS = {
-    "fall":          ("💀", "Fall detected"),
-    "possible_fall": ("⚠️", "Possible fall"),
-    "inactive":      ("🕯", "Inactivity alert"),
-    "present":       ("👤", "Someone entered"),
-    "empty":         ("🏚", "Room empty"),
-    "moving":        ("🚶", "Movement detected"),
-    "reset":         ("✅", "Alert acknowledged"),
-}
-
-
 def _on_event(event: Event) -> None:
     """Called by the StateMachine on every state transition."""
     now  = datetime.now()
     ts   = now.strftime("%H:%M")
-    icon, label = _LABELS.get(event.kind, ("👻", event.kind.replace("_", " ").title()))
+    d = tombstones.describe(event)
+    label = d["label"]
 
-    text = f"{icon} {label}"
-    if event.active_links:
-        text += f" near {', '.join(event.active_links)}"
-    text += f", {ts}"
-
-    tombstone = {"icon": icon, "text": text, "kind": event.kind, "ts": ts, "note": event.note}
+    tombstone = {"icon": d["icon"], "text": f"{d['text']}, {ts}", "kind": event.kind,
+                 "ts": ts, "note": event.note}
     with _lock:
         _state["room_state"] = event.state
         _state["events"].insert(0, tombstone)

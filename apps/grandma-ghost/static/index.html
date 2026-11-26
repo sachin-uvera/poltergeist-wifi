@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>👻 Grandma Ghost</title>
+<meta name="description" content="Grandma Ghost: a haunted map of a room, made from Wi-Fi signals only. No cameras.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%91%BB%3C/text%3E%3C/svg%3E">
 <style>
   /* ── Reset & base ─────────────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -153,6 +155,29 @@
                      box-shadow: 0 0 24px rgba(255,179,71,.35); }
   #alert-bar .btn { padding: 6px 14px; font-size: .8rem; }
 
+  /* ── Hosted demo: only what a recording can do ─────────────────────── */
+  #demo-note { display: none; font-size: .7rem; color: var(--muted); }
+  .demo #demo-note { display: inline; }
+  .demo .toggle-wrap, .demo #exorcise-btn { display: none; }
+
+  /* ── Phones and narrow windows: one column, page scrolls ───────────── */
+  @media (max-width: 860px) {
+    html, body { height: auto; min-height: 100%; }
+    #app { height: auto; min-height: 100vh; grid-template-columns: 1fr; grid-template-rows: none; }
+    header { flex-wrap: wrap; row-gap: 6px; }
+    header h1 { font-size: 1.1rem; }
+    #floor-panel, #wave-panel, #log-panel { grid-column: 1; grid-row: auto; }
+    #room { flex: none; height: min(115vw, 70vh); min-height: 300px; }
+    #event-list { max-height: 45vh; }
+    #wave-list { max-height: 40vh; }
+    #rec-select { font-size: 16px; padding: 8px; }        /* 16px stops iOS zooming on focus */
+    .btn { padding: 8px 14px; font-size: .85rem; }
+    #alert-bar { position: sticky; top: 8px; left: auto; transform: none; margin: 8px 10px 0;
+                 flex-wrap: wrap; justify-content: center; gap: 8px; padding: 8px 12px; }
+    #alert-bar .long { display: none; }
+    #alert-text { font-size: .9rem; }
+  }
+
   /* ── Alarm overlay ────────────────────────────────────────────────── */
   #alarm-overlay { display: none; position: fixed; inset: 0; z-index: 200;
                    background: rgba(255,0,40,.13); pointer-events: none; }
@@ -170,7 +195,7 @@
 <div id="alert-bar">
   <span id="alert-text"></span>
   <button class="btn btn-purple" id="ack-btn">✅ Acknowledge</button>
-  <button class="btn btn-ghost" id="restart-btn" style="display:none">↻ Restart replay</button>
+  <button class="btn btn-ghost" id="restart-btn" style="display:none">↻ Restart<span class="long"> replay</span></button>
 </div>
 
 <div id="calib-overlay">
@@ -186,6 +211,7 @@
     <span style="font-size:1.6rem">👻</span>
     <h1>Grandma Ghost</h1>
     <span id="status-badge">idle</span>
+    <span id="demo-note">recorded demo</span>
     <div class="spacer"></div>
     <div class="toggle-wrap">
       <span>Replay</span>
@@ -210,12 +236,12 @@
       <div id="room-empty">the room is empty…</div>
       <!-- one ghost per person; the second only appears when two people are detected -->
       <div class="ghost" id="ghost-0">
-        <img class="sprite cyan" src="/ghost.png" alt="ghost">
-        <img class="sprite red"  src="/ghost-red.png" alt="">   <!-- shown while a fall is flagged -->
+        <img class="sprite cyan" src="ghost.png" alt="ghost">
+        <img class="sprite red"  src="ghost-red.png" alt="">   <!-- shown while a fall is flagged -->
       </div>
       <div class="ghost" id="ghost-1">
-        <img class="sprite cyan" src="/ghost.png" alt="second ghost">
-        <img class="sprite red"  src="/ghost-red.png" alt="">
+        <img class="sprite cyan" src="ghost.png" alt="second ghost">
+        <img class="sprite red"  src="ghost-red.png" alt="">
       </div>
     </div>
   </div>
@@ -249,7 +275,10 @@ function connect() {
   ws.onmessage = e  => handleMsg(JSON.parse(e.data));
   ws.onclose   = ()  => setTimeout(connect, wsRetryMs = Math.min(wsRetryMs * 2, 10000));
 }
-connect();
+// The hosted demo has no hub: demo-player.js (loaded before this script) feeds the page the
+// same messages from pre-computed files. With the real hub there is no GG_DEMO.
+const DEMO = window.GG_DEMO || null;
+if (!DEMO) connect();
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentState  = "empty";
@@ -390,8 +419,12 @@ function renderRoom(ghosts, roomState, activeLinks) {
     // The state machine sees the room as a whole, so an alarm marks every ghost.
     el.classList.toggle("down", !!g && down);
     if (g) {
-      el.style.left = toPct(g.x) + "%";
-      el.style.top  = toPct(g.y) + "%";
+      // Keep the whole sprite inside the room, whatever its size. A ghost standing on a wall
+      // would otherwise be half cut off on a phone, where the room is only ~330 px wide.
+      const half = Math.max(el.offsetWidth, el.offsetHeight) / 2;   // lying down is as wide as it is tall
+      const w = room.clientWidth, h = room.clientHeight;
+      el.style.left = Math.min(Math.max(toPct(g.x) / 100 * w, half), Math.max(half, w - half)) + "px";
+      el.style.top  = Math.min(Math.max(toPct(g.y) / 100 * h, half), Math.max(half, h - half)) + "px";
     }
   });
 }
@@ -521,32 +554,31 @@ function populateRecordingSelect(recs) {
   recs.forEach(r => {
     const opt = document.createElement("option");
     opt.value       = r.label;
-    opt.textContent = r.filename;
+    opt.textContent = r.title || r.filename;
     sel.appendChild(opt);
   });
 }
 
-// Load recordings list on page load
-fetch("/api/recordings")
-  .then(r => r.json())
-  .then(populateRecordingSelect)
-  .catch(() => {});
-
-document.getElementById("replay-btn").addEventListener("click", () => {
-  const sel = document.getElementById("rec-select").value;
-  if (!sel) return;
-  fetch("/api/replay", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({recording: sel})
-  });
-});
-
-// ── Live / Replay toggle ──────────────────────────────────────────────────────
-const post = (url, body) => fetch(url, {
+// ── Calls to the hub (or to the demo player on the hosted site) ───────────────
+const post = (url, body) => DEMO ? DEMO.post(url, body) : fetch(url, {
   method: "POST", headers: {"Content-Type": "application/json"},
   body: JSON.stringify(body || {})
 });
+
+// Load recordings list on page load (the demo player sends its own list)
+if (!DEMO) {
+  fetch("/api/recordings")
+    .then(r => r.json())
+    .then(populateRecordingSelect)
+    .catch(() => {});
+}
+
+document.getElementById("replay-btn").addEventListener("click", () => {
+  const sel = document.getElementById("rec-select").value;
+  if (sel) post("/api/replay", {recording: sel});
+});
+
+// ── Live / Replay toggle ──────────────────────────────────────────────────────
 
 document.getElementById("mode-toggle").addEventListener("change", function() {
   // Live: read the boards over UDP. Replay: stop live; pick a recording and press Replay.
@@ -579,6 +611,8 @@ document.getElementById("status-badge").addEventListener("click", () => {
   alarmActive = false;
   alarmDismissed = true;
 });
+
+if (DEMO) DEMO.attach(handleMsg);
 </script>
 </body>
 </html>

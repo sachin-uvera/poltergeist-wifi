@@ -191,3 +191,15 @@ class MultiTracker:
         (ax, ay), (bx, by) = BOARDS[pair[0]], BOARDS[pair[1]]
         mx, my = (ax + bx) / 2, (ay + by) / 2
         return (xy[0] - mx) ** 2 + (xy[1] - my) ** 2
+
+
+def place_ghosts(tracker: "MultiTracker", room_state: str, excess: dict[str, float]) -> list[dict]:
+    """The ghosts to draw for one tick: [{"x", "y"}], at most two, none when the room is empty.
+
+    Shared by the hub and by export_demo.py so the hosted demo moves the ghosts the same way.
+    """
+    if room_state == "empty":
+        tracker.reset()          # nobody in the room: no ghost, and forget the old spot
+        return []
+    xys = tracker.update(excess) or [(0.5, 0.5)]
+    return [{"x": round(x, 3), "y": round(y, 3)} for x, y in xys]

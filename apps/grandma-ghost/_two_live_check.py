@@ -54,14 +54,14 @@ def send_phase(sock, seconds: float, busy: set, rng: random.Random):
 
 
 def post(path):
-    req = urllib.request.Request("http://127.0.0.1:8080" + path, data=b"{}",
+    req = urllib.request.Request("http://127.0.0.1:8081" + path, data=b"{}",
                                  headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=10) as r:
         return json.loads(r.read())
 
 
 async def watch(seconds: float, label: str, log: list):
-    async with websockets.connect("ws://127.0.0.1:8765") as ws:
+    async with websockets.connect("ws://127.0.0.1:8766") as ws:
         end = time.time() + seconds
         while time.time() < end:
             try:

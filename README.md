@@ -32,6 +32,12 @@ Then open http://localhost:8080.
 
 With the boards on the same Wi-Fi as your laptop, add `--live` instead of `--replay fall`, then press **Exorcise the room** with the room empty to calibrate.
 
+Hosted replay demo: the public demo is a static site in `site/`, published to GitHub Pages by `.github/workflows/pages.yml`. It has no server and needs no hardware. It plays back pre-computed files that hold only motion scores, room states, ghost positions and event text, never raw Wi-Fi data. To rebuild it after changing the pipeline (needs the local `recordings/`, which are not in the repo):
+
+```
+uv run --with numpy python apps/grandma-ghost/export_demo.py
+```
+
 Telegram alerts: copy `apps/grandma-ghost/.env.example` to `.env`, add a bot token from @BotFather, then run `apps/grandma-ghost/telegram_setup.py` to find your chat ID and send a test alert. The `.env` file is gitignored.
 
 Tests:

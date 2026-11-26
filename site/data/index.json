@@ -1,0 +1,30 @@
+[
+ {
+  "label": "fall",
+  "title": "Fall onto the mat",
+  "filename": "fall_20261125_070405.csv",
+  "file": "fall.json",
+  "duration_s": 60.0
+ },
+ {
+  "label": "sitting",
+  "title": "Sitting still",
+  "filename": "sitting_20261125_074102.csv",
+  "file": "sitting.json",
+  "duration_s": 60.0
+ },
+ {
+  "label": "fan",
+  "title": "Ceiling fan running",
+  "filename": "fan_20261125_070551.csv",
+  "file": "fan.json",
+  "duration_s": 60.0
+ },
+ {
+  "label": "empty",
+  "title": "Empty room",
+  "filename": "empty_20261125_060145.csv",
+  "file": "empty.json",
+  "duration_s": 60.0
+ }
+]

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>👻 Grandma Ghost</title>
+<style>
+  /* ── Reset & base ─────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #0d0d0f;
+    --panel:    #16161a;
+    --border:   #2a2a35;
+    --text:     #e8e8f0;
+    --muted:    #666680;
+    --purple:   #9b59ff;
+    --green:    #39ff8f;
+    --red:      #ff3860;
+    --amber:    #ffb347;
+    --ghost:    #c8b8ff;
+    --radius:   10px;
+    --gap:      14px;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text);
+               font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+
+  /* ── Layout ───────────────────────────────────────────────────────── */
+  #app { display: grid; height: 100vh; padding: var(--gap);
+         gap: var(--gap);
+         grid-template-rows: auto 1fr;
+         grid-template-columns: 1fr 1fr 280px; }
+
+  header { grid-column: 1 / -1; display: flex; align-items: center;
+           gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 1.3rem; letter-spacing: .03em; }
+  #status-badge { font-size: .75rem; padding: 3px 10px; border-radius: 20px;
+                  background: var(--border); color: var(--muted); }
+  #status-badge.live    { background: #1a3a1a; color: var(--green); }
+  #status-badge.replay  { background: #1a1a3a; color: var(--purple); }
+  #status-badge.alarm   { background: var(--red); color: #fff; animation: pulse 0.6s infinite; }
+  .spacer { flex: 1; }
+
+  /* toggle */
+  .toggle-wrap { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted); }
+  .toggle { position: relative; width: 42px; height: 22px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: var(--border); border-radius: 22px;
+            cursor: pointer; transition: .2s; }
+  .slider::before { content: ''; position: absolute; width: 16px; height: 16px;
+                    left: 3px; top: 3px; background: var(--muted); border-radius: 50%;
+                    transition: .2s; }
+  input:checked + .slider { background: var(--purple); }
+  input:checked + .slider::before { background: #fff; transform: translateX(20px); }
+
+  /* panels */
+  .panel { background: var(--panel); border: 1px solid var(--border);
+           border-radius: var(--radius); padding: 14px; overflow: hidden;
+           display: flex; flex-direction: column; gap: 10px; }
+  .panel-title { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em;
+                 color: var(--muted); }
+
+  /* ── Floor plan ───────────────────────────────────────────────────── */
+  #floor-panel { grid-column: 1; }
+
+  /* A dark room. The map is empty until someone walks in. */
+  #room { flex: 1; min-height: 280px; position: relative; overflow: hidden;
+          border-radius: 8px; border: 1px solid #1c1c26; background: #040406; }
+  /* soft light around each ghost */
+  .ghost::before { content: ""; position: absolute; left: 50%; top: 50%; width: 260px; height: 260px;
+                   transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none;
+                   background: radial-gradient(circle, rgba(155,89,255,.26) 0, rgba(155,89,255,.07) 40%, transparent 70%);
+                   transition: background .6s; }
+  .ghost.down::before { background: radial-gradient(circle, rgba(255,56,96,.32) 0, rgba(255,56,96,.09) 40%, transparent 70%); }
+
+  #links { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #links line { stroke: #2a2a3a; stroke-width: .35; stroke-dasharray: 1.2 1.6;
+                transition: stroke .4s, stroke-width .4s; }
+  #links line.on { stroke: var(--purple); stroke-width: .6; stroke-dasharray: none; }
+
+  .board { position: absolute; transform: translate(-50%, -50%); width: 26px; height: 26px;
+           border: 1px solid #34344a; border-radius: 6px; color: #55556e;
+           font-size: .7rem; display: flex; align-items: center; justify-content: center;
+           background: #0a0a10; }
+  #room-empty { position: absolute; inset: 0; display: flex; align-items: center;
+                justify-content: center; color: #34344a; font-size: .85rem;
+                letter-spacing: .08em; transition: opacity .8s; pointer-events: none; }
+  #room.occupied #room-empty { opacity: 0; }
+
+  /* The ghost silhouette. It fades in when someone enters and glides after them. */
+  .ghost { position: absolute; width: 96px; height: 112px; opacity: 0;
+           transform: translate(-50%, -50%); pointer-events: none;
+           transition: left 1.1s ease-in-out, top 1.1s ease-in-out, opacity 1.2s; }
+  .ghost.visible { opacity: 1; }
+  .ghost .sprite { position: absolute; inset: 0; width: 100%; height: 100%;
+                   animation: float 3s ease-in-out infinite;
+                   transition: opacity .6s, transform .8s; }
+  .ghost .sprite.red { opacity: 0; }
+  /* a fallen ghost lies down and turns red */
+  .ghost.down .sprite { animation: none; transform: rotate(82deg) translateY(8px); }
+  .ghost.down .sprite.cyan { opacity: 0; }
+  .ghost.down .sprite.red  { opacity: 1; }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+  /* ── Waveform panel ───────────────────────────────────────────────── */
+  #wave-panel { grid-column: 2; }
+  #wave-list   { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .wave-row { display: flex; align-items: center; gap: 8px; }
+  .wave-key { font-size: .68rem; color: var(--muted); width: 90px; flex-shrink: 0;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wave-bar-wrap { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .wave-bar { height: 100%; width: 0%; border-radius: 4px;
+              background: var(--purple); transition: width .4s, background .4s; }
+  .wave-bar.active { background: var(--green); }
+  .wave-val { font-size: .65rem; color: var(--muted); width: 46px; text-align: right; }
+
+  /* ── Tombstone log ────────────────────────────────────────────────── */
+  #log-panel { grid-column: 3; grid-row: 2; }
+  #event-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .event-item { font-size: .78rem; padding: 7px 9px; border-radius: 6px;
+                background: #1a1a20; border-left: 3px solid var(--border);
+                line-height: 1.4; }
+  .event-item.fall, .event-item.possible_fall { border-color: var(--red); background: #1f0a0a; }
+  .event-item.inactive                        { border-color: var(--amber); background: #1f180a; }
+  .event-item.moving                          { border-color: var(--green); }
+  .event-item.present                         { border-color: var(--purple); }
+
+  /* Replay controls (inside log panel header row) */
+  #replay-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  #rec-select { flex: 1; min-width: 0; background: var(--border); color: var(--text);
+                border: none; border-radius: 6px; padding: 4px 8px; font-size: .75rem; }
+  .btn { padding: 4px 12px; border: none; border-radius: 6px; cursor: pointer;
+         font-size: .75rem; font-weight: 600; }
+  .btn-purple { background: var(--purple); color: #fff; }
+  .btn-ghost  { background: var(--border); color: var(--text); }
+  .btn-red    { background: var(--red); color: #fff; }
+
+  /* ── Calibration overlay ──────────────────────────────────────────── */
+  #calib-overlay { display: none; position: fixed; inset: 0; z-index: 100;
+                   background: rgba(10,10,15,.92); flex-direction: column;
+                   align-items: center; justify-content: center; gap: 18px; }
+  #calib-overlay.show { display: flex; }
+  #calib-countdown { font-size: 5rem; color: var(--ghost);
+                     filter: drop-shadow(0 0 20px var(--purple)); font-weight: 700; }
+  #calib-label { font-size: 1.1rem; color: var(--muted); }
+
+  /* ── Alert bar (acknowledge / restart) ─────────────────────────────── */
+  #alert-bar { display: none; position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+               z-index: 300; align-items: center; gap: 12px; padding: 10px 16px;
+               border-radius: 10px; background: #2a0a12; border: 1px solid var(--red);
+               box-shadow: 0 0 24px rgba(255,56,96,.45); font-weight: 600; }
+  #alert-bar.show { display: flex; }
+  #alert-bar.amber { background: #2a1d0a; border-color: var(--amber);
+                     box-shadow: 0 0 24px rgba(255,179,71,.35); }
+  #alert-bar .btn { padding: 6px 14px; font-size: .8rem; }
+
+  /* ── Alarm overlay ────────────────────────────────────────────────── */
+  #alarm-overlay { display: none; position: fixed; inset: 0; z-index: 200;
+                   background: rgba(255,0,40,.13); pointer-events: none; }
+  #alarm-overlay.show { display: block; animation: flash 0.5s infinite; }
+
+  /* ── Animations ───────────────────────────────────────────────────── */
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+  @keyframes flash { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+
+<div id="alarm-overlay"></div>
+
+<div id="alert-bar">
+  <span id="alert-text"></span>
+  <button class="btn btn-purple" id="ack-btn">✅ Acknowledge</button>
+  <button class="btn btn-ghost" id="restart-btn" style="display:none">↻ Restart replay</button>
+</div>
+
+<div id="calib-overlay">
+  <div style="font-size:3rem">🕯</div>
+  <div id="calib-countdown">60</div>
+  <div id="calib-label">Exorcising the room… stand clear</div>
+</div>
+
+<div id="app">
+
+  <!-- ── Header ─────────────────────────────────────────────────────── -->
+  <header>
+    <span style="font-size:1.6rem">👻</span>
+    <h1>Grandma Ghost</h1>
+    <span id="status-badge">idle</span>
+    <div class="spacer"></div>
+    <div class="toggle-wrap">
+      <span>Replay</span>
+      <label class="toggle">
+        <input type="checkbox" id="mode-toggle">
+        <span class="slider"></span>
+      </label>
+      <span>Live</span>
+    </div>
+    <button class="btn btn-ghost" id="exorcise-btn" style="margin-left:12px">🕯 Exorcise the room</button>
+  </header>
+
+  <!-- ── Floor plan ─────────────────────────────────────────────────── -->
+  <div class="panel" id="floor-panel">
+    <div class="panel-title">Haunted floor plan</div>
+    <div id="room">
+      <svg id="links" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+      <div class="board" data-board="A">A</div>
+      <div class="board" data-board="B">B</div>
+      <div class="board" data-board="C">C</div>
+      <div class="board" data-board="D">D</div>
+      <div id="room-empty">the room is empty…</div>
+      <!-- one ghost per person; the second only appears when two people are detected -->
+      <div class="ghost" id="ghost-0">
+        <img class="sprite cyan" src="/ghost.png" alt="ghost">
+        <img class="sprite red"  src="/ghost-red.png" alt="">   <!-- shown while a fall is flagged -->
+      </div>
+      <div class="ghost" id="ghost-1">
+        <img class="sprite cyan" src="/ghost.png" alt="second ghost">
+        <img class="sprite red"  src="/ghost-red.png" alt="">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Waveform ────────────────────────────────────────────────────── -->
+  <div class="panel" id="wave-panel">
+    <div class="panel-title">Live motion scores</div>
+    <div id="wave-list"></div>
+  </div>
+
+  <!-- ── Tombstone log + replay controls ────────────────────────────── -->
+  <div class="panel" id="log-panel">
+    <div class="panel-title">Tombstone event log</div>
+    <div id="replay-controls">
+      <select id="rec-select"></select>
+      <button class="btn btn-purple" id="replay-btn">▶ Replay</button>
+    </div>
+    <div id="event-list"></div>
+  </div>
+
+</div>
+
+<script>
+// ── WebSocket connection ──────────────────────────────────────────────────────
+const WS_PORT = 8765;
+let ws, wsRetryMs = 1000;
+
+function connect() {
+  ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}`);
+  ws.onopen    = () => { wsRetryMs = 1000; };
+  ws.onmessage = e  => handleMsg(JSON.parse(e.data));
+  ws.onclose   = ()  => setTimeout(connect, wsRetryMs = Math.min(wsRetryMs * 2, 10000));
+}
+connect();
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentState  = "empty";
+let currentMode   = "idle";
+let alarmActive   = false;
+let alarmDismissed = false;   // user clicked the overlay; stays quiet until the state leaves alarm
+let audioCtx      = null;
+let currentRecording = "";    // filename of the replay on screen, if any
+let lastGhosts    = [];       // [{x, y}] from the hub, one per person
+let lastActive    = [];
+
+// Browsers only allow audio after a user gesture, so unlock it on the first click.
+document.addEventListener("click", () => {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+});
+
+// ── Message handler ───────────────────────────────────────────────────────────
+function handleMsg(msg) {
+  if (msg.type === "init") {
+    lastActive = msg.active_links || [];
+    lastGhosts = msg.ghosts || [];
+    renderScores(msg.scores || {}, lastActive);
+    renderEvents(msg.events || []);
+    if (msg.recordings) populateRecordingSelect(msg.recordings);
+    setMode(msg.mode || "idle", msg.recording || "");
+    applyState(msg.room_state || "empty");
+    renderRoom(lastGhosts, msg.room_state || "empty", lastActive);
+    if (msg.calibrating) showCalibOverlay(msg.calib_secs_left);
+  } else if (msg.type === "tick") {
+    lastActive = msg.active_links || [];
+    lastGhosts = msg.ghosts || [];
+    renderScores(msg.scores || {}, lastActive);
+    applyState(msg.room_state || "empty");
+    renderRoom(lastGhosts, msg.room_state || "empty", lastActive);
+  } else if (msg.type === "event") {
+    prependEvent(msg.event);
+    applyState(msg.room_state || "empty");
+    renderRoom(lastGhosts, msg.room_state || "empty", lastActive);
+  } else if (msg.type === "mode") {
+    setMode(msg.mode, msg.recording || "");
+  } else if (msg.type === "calibrating") {
+    showCalibOverlay(msg.secs_left);
+  } else if (msg.type === "calibrated") {
+    hideCalibOverlay();
+  }
+}
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+function setMode(mode, recording) {
+  currentMode = mode;
+  currentRecording = recording || "";
+  document.getElementById("mode-toggle").checked = (mode === "live");
+  updateBadge();
+  updateAlertBar();
+}
+
+// ── Alert bar: acknowledge, and restart a replay ──────────────────────────────
+const ACK_TEXT = {
+  fall:              "🚨 Fall detected",
+  possible_fall:     "⚠️ Possible fall",
+  inactive_too_long: "🕯 No movement for too long",
+};
+
+function updateAlertBar() {
+  const bar = document.getElementById("alert-bar");
+  const text = ACK_TEXT[currentState];
+  bar.classList.toggle("show", !!text);
+  bar.classList.toggle("amber", currentState === "inactive_too_long");
+  if (text) document.getElementById("alert-text").textContent = text;
+  // A replay can be run again from the start; live monitoring just carries on after acknowledging.
+  document.getElementById("restart-btn").style.display =
+    (currentMode !== "live" && currentRecording) ? "" : "none";
+}
+
+function updateBadge() {
+  const b = document.getElementById("status-badge");
+  const isAlarm = currentState === "fall" || currentState === "possible_fall";
+  if (isAlarm) {
+    b.textContent = currentState === "fall" ? "🚨 FALL" : "⚠️ POSSIBLE FALL";
+    b.className = "alarm";
+  } else {
+    b.textContent = currentMode + " · " + currentState.replace(/_/g, " ");
+    b.className = currentMode === "live" ? "live" : currentMode === "replay" ? "replay" : "";
+  }
+}
+
+// ── Floor plan ────────────────────────────────────────────────────────────────
+// Room coordinates (0..1) from the hub map onto the room box, leaving a margin
+// so the corner boards and the ghost never sit on the edge.
+// A top-left, B top-right, D bottom-left, C bottom-right.
+// Keep in step with BOARDS in position.py (the hub places the ghosts with those).
+const BOARD_XY = {A: [0, 0], B: [1, 0], C: [1, 1], D: [0, 1]};
+const MARGIN = 12;   // percent
+const toPct = v => MARGIN + v * (100 - 2 * MARGIN);
+
+// Place the corner boards and draw the six links between them (once).
+(function buildRoom() {
+  document.querySelectorAll(".board").forEach(el => {
+    const [x, y] = BOARD_XY[el.dataset.board];
+    el.style.left = toPct(x) + "%";
+    el.style.top  = toPct(y) + "%";
+  });
+  const svg = document.getElementById("links");
+  const ids = Object.keys(BOARD_XY);
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = BOARD_XY[ids[i]], b = BOARD_XY[ids[j]];
+    const ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    ln.id = "link-" + ids[i] + ids[j];
+    ln.setAttribute("x1", toPct(a[0])); ln.setAttribute("y1", toPct(a[1]));
+    ln.setAttribute("x2", toPct(b[0])); ln.setAttribute("y2", toPct(b[1]));
+    svg.appendChild(ln);
+  }
+})();
+
+// A ghost appears for each person in the room and glides to where they are.
+// When the room is empty the map is dark and blank.
+function renderRoom(ghosts, roomState, activeLinks) {
+  const room = document.getElementById("room");
+  const down = roomState === "fall" || roomState === "possible_fall";
+
+  // highlight the links that are disturbed
+  document.querySelectorAll("#links line").forEach(l => l.classList.remove("on"));
+  (activeLinks || []).forEach(lk => {
+    const m = lk.match(/^([A-D])\/CSI-([A-D])$/);
+    if (!m) return;
+    const id = "link-" + [m[1], m[2]].sort().join("");
+    document.getElementById(id)?.classList.add("on");
+  });
+
+  const shown = roomState === "empty" ? [] : (ghosts || []);
+  room.classList.toggle("occupied", shown.length > 0);
+
+  [0, 1].forEach(i => {
+    const el = document.getElementById("ghost-" + i);
+    const g = shown[i];
+    el.classList.toggle("visible", !!g);
+    // The state machine sees the room as a whole, so an alarm marks every ghost.
+    el.classList.toggle("down", !!g && down);
+    if (g) {
+      el.style.left = toPct(g.x) + "%";
+      el.style.top  = toPct(g.y) + "%";
+    }
+  });
+}
+
+function renderScores(scores, activeLinks) {
+  renderWaveBars(scores, new Set(activeLinks));
+}
+
+// ── Waveform bars ─────────────────────────────────────────────────────────────
+const MAX_SCORE = 0.35;   // visual ceiling for the bar
+
+function renderWaveBars(scores, activeSet) {
+  const list = document.getElementById("wave-list");
+  const keys = Object.keys(scores).sort();
+
+  // Add rows for new keys
+  keys.forEach(k => {
+    if (!document.getElementById("wave-" + k)) {
+      const row = document.createElement("div");
+      row.className = "wave-row";
+      row.id = "wave-row-" + k;
+      row.innerHTML = `
+        <span class="wave-key">${k}</span>
+        <div class="wave-bar-wrap"><div class="wave-bar" id="wave-${k}"></div></div>
+        <span class="wave-val" id="waveval-${k}">0.000</span>`;
+      list.appendChild(row);
+    }
+  });
+
+  // Update existing rows
+  keys.forEach(k => {
+    const v    = scores[k] || 0;
+    const pct  = Math.min(100, (v / MAX_SCORE) * 100).toFixed(1);
+    const bar  = document.getElementById("wave-" + k);
+    const val  = document.getElementById("waveval-" + k);
+    if (bar) {
+      bar.style.width = pct + "%";
+      bar.classList.toggle("active", activeSet.has(k));
+    }
+    if (val) val.textContent = v.toFixed(4);
+  });
+}
+
+// ── State machine visuals ─────────────────────────────────────────────────────
+function applyState(state) {
+  const prev = currentState;
+  currentState = state;
+  const alarm = document.getElementById("alarm-overlay");
+  const isAlarm = state === "fall" || state === "possible_fall";
+
+  if (isAlarm) {
+    if (!alarmActive && !alarmDismissed) {
+      alarmActive = true;
+      alarm.classList.add("show");
+      playAlarmSound();
+    } else if (alarmActive && prev !== state) {
+      playAlarmSound();            // possible_fall -> fall: sound again
+    }
+  } else {
+    alarmActive = false;
+    alarmDismissed = false;
+    alarm.classList.remove("show");
+  }
+  updateBadge();
+  updateAlertBar();
+}
+
+// ── Tombstone log ─────────────────────────────────────────────────────────────
+function renderEvents(events) {
+  const list = document.getElementById("event-list");
+  list.innerHTML = "";
+  events.forEach(e => list.appendChild(makeEventEl(e)));
+}
+
+function prependEvent(e) {
+  const list = document.getElementById("event-list");
+  list.insertBefore(makeEventEl(e), list.firstChild);
+}
+
+function makeEventEl(e) {
+  const div = document.createElement("div");
+  div.className = "event-item " + (e.kind || "");
+  div.textContent = e.text;
+  return div;
+}
+
+// ── Calibration overlay ───────────────────────────────────────────────────────
+function showCalibOverlay(secsLeft) {
+  document.getElementById("calib-overlay").classList.add("show");
+  document.getElementById("calib-countdown").textContent = secsLeft;
+}
+function hideCalibOverlay() {
+  document.getElementById("calib-overlay").classList.remove("show");
+}
+
+// ── Alarm sound (Web Audio API — no external files) ───────────────────────────
+function playAlarmSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Two-tone siren: 880 Hz + 440 Hz alternating
+    function beep(freq, startAt, duration) {
+      const osc  = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type      = "sine";
+      osc.frequency.setValueAtTime(freq, startAt);
+      gain.gain.setValueAtTime(0.3, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+      osc.start(startAt);
+      osc.stop(startAt + duration);
+    }
+    const t = audioCtx.currentTime;
+    for (let i = 0; i < 3; i++) {
+      beep(880, t + i * 0.6,       0.25);
+      beep(440, t + i * 0.6 + 0.3, 0.25);
+    }
+  } catch (err) {
+    console.warn("Audio:", err);
+  }
+}
+
+// ── Replay controls ───────────────────────────────────────────────────────────
+function populateRecordingSelect(recs) {
+  const sel = document.getElementById("rec-select");
+  sel.innerHTML = "";
+  recs.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value       = r.label;
+    opt.textContent = r.filename;
+    sel.appendChild(opt);
+  });
+}
+
+// Load recordings list on page load
+fetch("/api/recordings")
+  .then(r => r.json())
+  .then(populateRecordingSelect)
+  .catch(() => {});
+
+document.getElementById("replay-btn").addEventListener("click", () => {
+  const sel = document.getElementById("rec-select").value;
+  if (!sel) return;
+  fetch("/api/replay", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({recording: sel})
+  });
+});
+
+// ── Live / Replay toggle ──────────────────────────────────────────────────────
+const post = (url, body) => fetch(url, {
+  method: "POST", headers: {"Content-Type": "application/json"},
+  body: JSON.stringify(body || {})
+});
+
+document.getElementById("mode-toggle").addEventListener("change", function() {
+  // Live: read the boards over UDP. Replay: stop live; pick a recording and press Replay.
+  post(this.checked ? "/api/live" : "/api/stop");
+});
+
+// ── Exorcise button ───────────────────────────────────────────────────────────
+document.getElementById("exorcise-btn").addEventListener("click", async () => {
+  if (!confirm("Leave the room and click OK to start the 60 s empty-room calibration.")) return;
+  const r = await post("/api/calibrate");
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    alert(j.error || "Calibration could not start.");
+  }
+});
+
+// ── Acknowledge / restart ─────────────────────────────────────────────────────
+document.getElementById("ack-btn").addEventListener("click", async () => {
+  const r = await post("/api/acknowledge");
+  if (!r.ok) alert("Nothing to acknowledge.");
+});
+document.getElementById("restart-btn").addEventListener("click", async () => {
+  if (currentRecording) await post("/api/replay", {recording: currentRecording});
+});
+
+// ── Dismiss alarm on click ────────────────────────────────────────────────────
+// The overlay ignores pointer events so the page stays usable; the badge click dismisses it.
+document.getElementById("status-badge").addEventListener("click", () => {
+  document.getElementById("alarm-overlay").classList.remove("show");
+  alarmActive = false;
+  alarmDismissed = true;
+});
+</script>
+</body>
+</html>

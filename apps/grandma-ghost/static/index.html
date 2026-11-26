@@ -183,6 +183,11 @@
                    background: rgba(255,0,40,.13); pointer-events: none; }
   #alarm-overlay.show { display: block; animation: flash 0.5s infinite; }
 
+  /* ── Sound button: loud until sound is on, then quiet ───────────────── */
+  #sound-btn { font-size: .72rem; padding: 3px 10px; border: 1px solid var(--amber); color: var(--amber); }
+  #sound-btn.on { border-color: var(--border); color: var(--muted); }
+  #sound-btn.nag { animation: pulse 0.6s infinite; background: #3a2a08; }
+
   /* ── Animations ───────────────────────────────────────────────────── */
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
   @keyframes flash { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
@@ -211,6 +216,7 @@
     <span style="font-size:1.6rem">👻</span>
     <h1>Grandma Ghost</h1>
     <span id="status-badge">idle</span>
+    <button class="btn btn-ghost" id="sound-btn" title="Browsers keep a page silent until you click it">🔇 Enable sound</button>
     <span id="demo-note">recorded demo</span>
     <div class="spacer"></div>
     <div class="toggle-wrap">
@@ -290,11 +296,36 @@ let currentRecording = "";    // filename of the replay on screen, if any
 let lastGhosts    = [];       // [{x, y}] from the hub, one per person
 let lastActive    = [];
 
-// Browsers only allow audio after a user gesture, so unlock it on the first click.
-document.addEventListener("click", () => {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === "suspended") audioCtx.resume();
-});
+// ── Sound ─────────────────────────────────────────────────────────────────────
+// Browsers keep a page silent until the user clicks it. Sound scheduled before that
+// is held back and plays on the first click, which made the siren go off when the
+// user pressed Acknowledge. So: sound is only ever scheduled while it can play now,
+// any click on the page unlocks it, and the button shows whether it is on.
+let sirenNodes = [];            // oscillators of the siren that is playing, so it can be stopped
+
+function soundOn() { return !!audioCtx && audioCtx.state === "running"; }
+
+function updateSoundBtn() {
+  const b = document.getElementById("sound-btn");
+  const on = soundOn();
+  b.classList.toggle("on", on);
+  b.textContent = on ? "🔊 Sound on" : "🔇 Enable sound";
+  // nag while an alarm is showing and the browser is still keeping the page silent
+  b.classList.toggle("nag", !on && alarmActive);
+}
+
+function unlockSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const p = audioCtx.state === "suspended" ? audioCtx.resume() : Promise.resolve();
+    p.then(updateSoundBtn, updateSoundBtn);
+  } catch (err) {
+    console.warn("Audio:", err);
+  }
+}
+
+// capture phase: runs before the button's own handler, so Acknowledge can stop the siren after
+document.addEventListener("click", unlockSound, true);
 
 // ── Message handler ───────────────────────────────────────────────────────────
 function handleMsg(msg) {
@@ -487,7 +518,9 @@ function applyState(state) {
     alarmActive = false;
     alarmDismissed = false;
     alarm.classList.remove("show");
+    stopAlarmSound();
   }
+  updateSoundBtn();
   updateBadge();
   updateAlertBar();
 }
@@ -521,9 +554,17 @@ function hideCalibOverlay() {
 }
 
 // ── Alarm sound (Web Audio API — no external files) ───────────────────────────
+function stopAlarmSound() {
+  sirenNodes.forEach(o => { try { o.stop(); } catch (e) {} });
+  sirenNodes = [];
+}
+
 function playAlarmSound() {
+  // Never schedule sound the browser is holding back: it would play later, at the
+  // user's next click, which is usually the Acknowledge button.
+  if (!soundOn()) { updateSoundBtn(); return; }
+  stopAlarmSound();
   try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     // Two-tone siren: 880 Hz + 440 Hz alternating
     function beep(freq, startAt, duration) {
       const osc  = audioCtx.createOscillator();
@@ -536,6 +577,7 @@ function playAlarmSound() {
       gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
       osc.start(startAt);
       osc.stop(startAt + duration);
+      sirenNodes.push(osc);
     }
     const t = audioCtx.currentTime;
     for (let i = 0; i < 3; i++) {
@@ -595,8 +637,26 @@ document.getElementById("exorcise-btn").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("sound-btn").addEventListener("click", () => {
+  // unlockSound already ran (capture phase); wait for it, then confirm with a soft tone
+  setTimeout(() => {
+    if (!soundOn()) return;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.frequency.value = 660;
+    const t0 = audioCtx.currentTime;
+    g.gain.setValueAtTime(0.08, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
+    o.start(t0); o.stop(t0 + 0.35);
+    // if an alarm is already on screen, sound it now that we can
+    if (alarmActive) playAlarmSound();
+  }, 80);
+});
+updateSoundBtn();
+
 // ── Acknowledge / restart ─────────────────────────────────────────────────────
 document.getElementById("ack-btn").addEventListener("click", async () => {
+  stopAlarmSound();
   const r = await post("/api/acknowledge");
   if (!r.ok) alert("Nothing to acknowledge.");
 });

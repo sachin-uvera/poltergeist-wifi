@@ -45,8 +45,12 @@ import position    # apps/grandma-ghost/position.py
 import tombstones  # apps/grandma-ghost/tombstones.py
 
 try:
-    from dotenv import load_dotenv
-    load_dotenv(Path(__file__).parent / ".env")
+    from dotenv import dotenv_values
+    # .env fills any setting that is missing or empty. load_dotenv() alone keeps an
+    # existing empty variable, which silently switched Telegram off.
+    for _key, _value in dotenv_values(Path(__file__).parent / ".env").items():
+        if _value and not os.environ.get(_key):
+            os.environ[_key] = _value
 except ImportError:
     pass
 

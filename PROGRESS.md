@@ -60,7 +60,7 @@ Same chip (ESP32-D0WD-V3 rev 3.1), but with a CP210x USB chip. Both now run the 
 
 ### Build: done in Kiro, so `.kiro/` is the evidence
 - [x] Steering files: product, privacy (no raw CSI leaves the hub, consent first), tech conventions, structure
-- [ ] Spec: `firmware/csi_node`, the production firmware built from the spike. Spec and sketch are written (`.kiro/specs/firmware_csi_node.md`); not yet flashed or tested on the boards, which still run the spike firmware
+- [x] Spec: `firmware/csi_node`, the production firmware built from the spike (`.kiro/specs/firmware_csi_node.md`). Flashed on all four boards on Nov 27 (A and B by normal upload, C and D with `firmware/flash_chunked.py`); every board boots with its `# board X` line and all 12 links update about once a second. Not yet tested: Wi-Fi auto-reconnect (router off and on)
 - [x] Spec: `core` signal pipeline (cleanup, motion score, per-link zones) (`.kiro/specs/core_pipeline.md`)
 - [x] Spec: state machine (empty, present, moving, possible fall, fall, inactive too long) (`.kiro/specs/core_state.md`)
 - [ ] Spec: Grandma Ghost app (haunted floor plan, tombstone event log, Telegram alert). The app is built (next line) but there is no spec file for it yet

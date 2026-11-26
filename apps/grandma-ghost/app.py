@@ -24,6 +24,7 @@ import sys
 import threading
 import time
 import tomllib
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -383,21 +384,35 @@ def _acknowledge() -> bool:
 # Telegram
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _send_telegram(message: str) -> None:
-    token   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+def _send_telegram(message: str) -> bool:
+    """Send one message to the family chat. Returns True on success.
+
+    Never raises: a network problem must not stop the hub. The token is part of
+    the URL, so errors are logged by Telegram's description, never by URL.
+    """
+    token   = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
     if not token or not chat_id:
         log.warning("Telegram not configured (set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env). "
                     "Would have sent: %s", message)
-        return
+        return False
+    url  = f"https://api.telegram.org/bot{token}/sendMessage"
+    data = urllib.parse.urlencode({"chat_id": chat_id, "text": message}).encode()
     try:
-        url  = f"https://api.telegram.org/bot{token}/sendMessage"
-        data = urllib.parse.urlencode({"chat_id": chat_id, "text": message}).encode()
         with urllib.request.urlopen(urllib.request.Request(url, data=data, method="POST"),
                                     timeout=10) as resp:
             log.info("Telegram sent (HTTP %d): %s", resp.status, message)
-    except Exception as exc:  # network errors must never crash the hub
+            return True
+    except urllib.error.HTTPError as exc:
+        # Telegram explains the problem in the body, e.g. "Unauthorized" or "chat not found"
+        try:
+            desc = json.loads(exc.read()).get("description", "")
+        except Exception:
+            desc = ""
+        log.warning("Telegram rejected the message (HTTP %d): %s", exc.code, desc or "no reason given")
+    except Exception as exc:  # DNS, timeout, no internet
         log.warning("Telegram send failed: %s", type(exc).__name__)
+    return False
 
 
 # ─────────────────────────────────────────────────────────────────────────────

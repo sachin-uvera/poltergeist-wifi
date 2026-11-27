@@ -20,22 +20,39 @@ Both paths are identical from the state machine's point of view.
 from __future__ import annotations
 
 import csv
-import sys
+import json
+import os
+import re
 import threading
-import time
 import tomllib
-import tomli_w
-from dataclasses import asdict
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 from mcp.server.mcpserver import MCPServer
 
 # ── Repo root (two levels up from this file) ──────────────────────────────────
 _ROOT = Path(__file__).parent.parent
 _RECORDINGS = _ROOT / "recordings"
 _CONFIG     = Path(__file__).parent / "config.toml"
+
+# The Grandma Ghost hub that owns the live boards. This server runs in its own process
+# (Kiro starts it), so it cannot see the hub's memory; it asks the hub's local HTTP API,
+# which serves scores and states only, never raw CSI.
+_HUB_URL = os.environ.get("GG_HUB_URL", "http://127.0.0.1:8080").rstrip("/")
+
+
+def _hub(path: str, post: bool = False, timeout: float = 2.0) -> dict | None:
+    """Call the running hub. Returns None if no hub is running."""
+    req = urllib.request.Request(_HUB_URL + path, data=b"{}" if post else None,
+                                 headers={"Content-Type": "application/json"},
+                                 method="POST" if post else "GET")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read())
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
 
 # ── Lazy imports from core (avoid circular at module level) ───────────────────
 def _core():
@@ -77,22 +94,33 @@ server = MCPServer(
 @server.tool(
     name="get_live_stats",
     description=(
-        "Return the current motion score per link, the room state, and the set "
-        "of active links. Works in both live mode (boards streaming) and after "
-        "a replay() call. Motion scores only — raw CSI is never returned."
+        "Return the motion score per link, the room state, the active links and the ghost "
+        "positions. Reads the running Grandma Ghost hub (live boards or its replay) over its "
+        "local API; if no hub is running, returns the result of this server's last replay() "
+        "call. The 'source' field says which. Scores only, never raw CSI."
     ),
 )
 def get_live_stats() -> dict[str, Any]:
+    hub = _hub("/api/state")
+    if hub is not None:
+        return {
+            "source":       f"hub ({hub.get('mode')})",
+            "state":        hub.get("room_state"),
+            "active_links": hub.get("active_links", []),
+            "scores":       {k: round(v, 5) for k, v in sorted(hub.get("scores", {}).items())},
+            "ghosts":       hub.get("ghosts", []),
+            "calibrated":   hub.get("calibrated"),
+            "recent_events": [e.get("text") for e in hub.get("events", [])[:5]],
+        }
+
     room, sm = _ensure_live()
     with _lock:
-        scores       = room.scores()
-        active       = sorted(room.active_links())
-        state        = sm.state.value
-        state_since  = sm.state_since_ms
-
+        scores = room.scores()
+        active = sorted(room.active_links())
+        state = sm.state.value
     return {
+        "source":       "last replay() in this server (no hub running at " + _HUB_URL + ")",
         "state":        state,
-        "state_since_ms": state_since,
         "active_links": active,
         "scores":       {k: round(v, 5) for k, v in sorted(scores.items())},
     }
@@ -253,37 +281,73 @@ def set_thresholds(updates: dict[str, Any]) -> dict[str, Any]:
     with open(_CONFIG, "rb") as fh:
         cfg = tomllib.load(fh)
 
-    allowed_zones = set(cfg.get("zones", {}).keys())
-    allowed_state = set(cfg.get("state", {}).keys())
-    allowed       = allowed_zones | allowed_state
+    section_of = {k: "zones" for k in cfg.get("zones", {})}
+    section_of.update({k: "state" for k in cfg.get("state", {})})
 
-    rejected = {k: v for k, v in updates.items() if k not in allowed}
+    rejected = [k for k in updates if k not in section_of]
     if rejected:
         return {
-            "status":   "error",
-            "message":  f"Unknown keys (not in [zones] or [state]): {list(rejected.keys())}",
-            "allowed":  sorted(allowed),
+            "status":  "error",
+            "message": f"Unknown keys (not in [zones] or [state]): {rejected}",
+            "allowed": sorted(section_of),
         }
 
-    applied: dict[str, Any] = {}
+    # Every value must be a positive number. Keys that are whole numbers (for example
+    # fall_links_min) stay whole numbers.
+    new_text: dict[str, str] = {}
     for key, value in updates.items():
-        if key in allowed_zones:
-            cfg["zones"][key] = value
-            applied[key] = value
-        elif key in allowed_state:
-            cfg["state"][key] = value
-            applied[key] = value
+        old = cfg[section_of[key]][key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+            return {"status": "error", "message": f"{key} must be a positive number, got {value!r}"}
+        if isinstance(old, int) and not isinstance(old, bool):
+            if float(value) != int(value):
+                return {"status": "error", "message": f"{key} must be a whole number, got {value!r}"}
+            new_text[key] = str(int(value))
+        else:
+            new_text[key] = repr(float(value))
 
-    with open(_CONFIG, "wb") as fh:
-        tomli_w.dump(cfg, fh)
+    # bytes in, bytes out: read_text/write_text would turn the file's line endings into
+    # Windows ones on Windows, changing every line
+    text = _CONFIG.read_bytes().decode("utf-8")
+    text, changed = _replace_values(text, {k: (section_of[k], v) for k, v in new_text.items()})
+    missing = sorted(set(new_text) - changed)
+    if missing:
+        return {"status": "error", "message": f"Could not find these lines in config.toml: {missing}"}
 
-    reload_config()
+    tmp = _CONFIG.with_suffix(".toml.tmp")
+    tmp.write_bytes(text.encode("utf-8"))
+    with open(tmp, "rb") as fh:
+        check = tomllib.load(fh)       # never leave a broken file behind
+    for key, value in new_text.items():
+        assert str(check[section_of[key]][key]) == str(tomllib.loads(f"x = {value}")["x"])
+    tmp.replace(_CONFIG)
+
+    reload_config()                    # this server: affects replay()
+    hub = _hub("/api/reload-config", post=True)   # the running hub: affects live detection
 
     return {
         "status":  "ok",
-        "applied": applied,
-        "config":  {"zones": cfg["zones"], "state": cfg["state"]},
+        "applied": {k: check[section_of[k]][k] for k in new_text},
+        "running_hub": ("reloaded" if hub and hub.get("reloaded")
+                        else f"no hub reachable at {_HUB_URL}; restart the hub to apply"),
+        "config":  {"zones": check["zones"], "state": check["state"]},
     }
+
+
+def _replace_values(text: str, updates: dict[str, tuple[str, str]]) -> tuple[str, set[str]]:
+    """Replace `key = value` lines inside their [section], keeping spacing and comments."""
+    out, done, section = [], set(), None
+    for line in text.splitlines(keepends=True):
+        head = re.match(r"\s*\[([^\]]+)\]", line)
+        if head:
+            section = head.group(1).strip()
+        m = re.match(r"^(\s*)([A-Za-z_][\w-]*)(\s*=\s*)([^#\r\n]*?)(\s*(#.*)?)(\r?\n?)$", line)
+        if m and m.group(2) in updates and updates[m.group(2)][0] == section:
+            key = m.group(2)
+            line = m.group(1) + key + m.group(3) + updates[key][1] + m.group(5) + m.group(7)
+            done.add(key)
+        out.append(line)
+    return "".join(out), done
 
 
 # ─────────────────────────────────────────────────────────────────────────────

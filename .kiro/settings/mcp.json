@@ -1,16 +1,16 @@
 {
   "mcpServers": {
     "spirit-box": {
-      "command": "uv",
+      "command": "C:\\Users\\sachs\\.local\\bin\\uv.exe",
       "args": [
         "run",
+        "--directory", "C:\\Project\\Dev\\UVERA\\competitions\\poltergeist-wifi",
         "--with", "mcp[cli]",
         "--with", "numpy",
-        "--with", "tomli-w",
         "python", "-m", "core.mcp_server"
       ],
-      "cwd": "${workspaceFolder}",
-      "env": {}
+      "env": {},
+      "disabled": false
     }
   }
 }

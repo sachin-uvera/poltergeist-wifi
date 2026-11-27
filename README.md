@@ -51,7 +51,8 @@ uv run --with pytest --with numpy --with hypothesis pytest core/tests -v
 ## Repo layout
 
 ```
-.kiro/             steering, specs, hooks, MCP config (how the project was built with Kiro)
+.kiro/             steering, specs, hooks, MCP config, the ghost-hunter agent (how the project was built with Kiro)
+powers/spirit-box  a Kiro power: skills for tuning and reading the detector through the spirit-box MCP tools
 core/              sensing: ingest, pipeline, state machine, replay, "spirit box" MCP server
 apps/grandma-ghost the web app
 firmware/csi_node  production ESP32 firmware (spec and sketch)

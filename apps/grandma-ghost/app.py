@@ -344,6 +344,24 @@ def _run_calibration() -> None:
     log.info("Calibration done: %d links", len(baselines))
 
 
+def _reload_config() -> dict:
+    """Re-read core/config.toml into the running pipeline and state machine.
+
+    Covers [zones] and [state], the sections set_thresholds may change. [pipeline] values
+    such as the window size apply to links created after the reload.
+    """
+    import core.pipeline as pipeline_mod
+    from core.state import _load_cfg
+
+    pipeline_mod.reload_config()
+    state_cfg = _load_cfg()["state"]
+    with _sm_lock:
+        if _sm is not None:
+            _sm._cfg = state_cfg
+    log.info("Config reloaded: motion_threshold=%s", pipeline_mod._THRESHOLD)
+    return {"reloaded": True, "motion_threshold": pipeline_mod._THRESHOLD, "state": state_cfg}
+
+
 _ACKABLE = ("possible_fall", "fall", "inactive_too_long")
 
 
@@ -457,6 +475,11 @@ class _Handler(BaseHTTPRequestHandler):
             rid = _new_run()
             threading.Thread(target=_run_live, args=(rid,), daemon=True).start()
             self._json({"started": True})
+
+        elif path == "/api/reload-config":
+            # Called by the spirit-box MCP server after set_thresholds, so a new threshold
+            # reaches the running pipeline and state machine without a restart.
+            self._json(_reload_config())
 
         elif path == "/api/acknowledge":
             if not _acknowledge():

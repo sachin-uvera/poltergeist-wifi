@@ -1,0 +1,24 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "poltergeist-spirit-box",
+  "version": "1.0.0",
+  "description": "Tune and check the Poltergeist Wi-Fi fall detector (Grandma Ghost) through its spirit-box MCP tools: read the room, replay labelled recordings, and change one detection threshold at a time without missing a fall.",
+  "author": {
+    "name": "Sachin Upadhyay",
+    "url": "https://github.com/sachin-uvera"
+  },
+  "keywords": [
+    "spirit box",
+    "spirit-box",
+    "poltergeist",
+    "grandma ghost",
+    "false alarm",
+    "fall detection",
+    "motion_threshold",
+    "detection threshold",
+    "exorcise the room"
+  ],
+  "homepage": "https://sachin-uvera.github.io/poltergeist-wifi/",
+  "repository": "https://github.com/sachin-uvera/poltergeist-wifi",
+  "license": "MIT"
+}

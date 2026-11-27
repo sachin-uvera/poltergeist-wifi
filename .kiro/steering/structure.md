@@ -5,7 +5,13 @@ poltergeist-wifi/
 ├── .kiro/
 │   ├── steering/       # product.md, privacy.md, tech.md, structure.md
 │   ├── specs/          # one spec per component (firmware, core, apps)
-│   └── hooks/          # replay regression hook and others
+│   ├── hooks/          # replay regression hook and others
+│   ├── agents/         # ghost-hunter: read-only regression checker
+│   └── settings/       # mcp.json: the spirit-box MCP server
+│
+├── powers/
+│   └── spirit-box/     # Kiro power (plugin.json + skills), imported from this folder;
+│                       # uses the spirit-box server from .kiro/settings/mcp.json
 │
 ├── firmware/
 │   └── csi_node/       # production ESP32 firmware (built from spike/csi_rx)
